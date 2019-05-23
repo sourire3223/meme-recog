@@ -5,7 +5,7 @@
 
 ## 專案概要資訊
 
-- 組員：[林琮珉](https://www.facebook.com/100000215725013)、[林建銘](https://www.facebook.com/100002583373383)、[蕭維斌](https://www.facebook.com/weipin.hsiao.1)
+- 組員：[林琮珉](https://www.facebook.com/100000215725013)(組長)、[林建銘](https://www.facebook.com/100002583373383)、[蕭維斌](https://www.facebook.com/weipin.hsiao.1)(專案管理)
 
 - 主題：迷因圖片辨識 Meme Recognition Project
 

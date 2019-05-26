@@ -21,16 +21,37 @@
 
 - 實作方法：
 
-  1. 資料蒐集：來源可以從 9gag 或是 imgur 等可以直接用 meme 作為 tag 來搜尋的網站，數量都有十萬筆以上，或使用別人已建立的迷因圖片資料庫，輔以其他一般圖片的資料庫作為非迷因圖片。
-  2. 資料前處理：處理資料形式供模型使用。
+  1. 資料蒐集：整合兩個圖片資料庫：
+
+     - Meme Generator Data Set: <https://www.kaggle.com/electron0zero/memegenerator-dataset/home>
+     - cifar-100: <https://www.cs.toronto.edu/~kriz/cifar.html>
+
+     前者作為迷因圖片，後者會被標籤為非迷因圖片
+
+  2. 資料前處理：處理資料形式供模型使用
+
+     主要的工作集中在 Meme Generator Data Set 的處理，其原始資料為 webarchive.loc.gov 的庫存引導網址，需要建立爬蟲把正確圖片連結下載回來，再利用 Keras API 預處裡圖片檔。
+
   3. 使用神經網路模型訓練之，並驗證其成功率。
+
+  目前模型設計：
+
+     ```mermaid
+  graph LR
+     Pic --> CNN
+     CNN --> SPP
+     SPP --> FullConectedNN
+     FullConectedNN --> IsMeme?
+     ```
 
 - 專案排程：
 
-  5/17
+  5/27(專案目前進度) 開始處裡 Meme Generator Data Set，完成爬蟲，開始爬資料，並嘗試設計預處理程式碼
 
-  5/24
+  5/28 資料預處裡程式碼工作完成，開始執行預處裡工作
 
-  5/31 繳交報告
+  6/1 完成模型設計並利用小規模資料測試，先期成果發表
 
-- 目前進度
+  6/2-6/6 實際訓練模型並分析結果
+
+  6/7 繳交報告並結案

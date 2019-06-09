@@ -251,11 +251,11 @@ y0_test = y1_train[7000+total:]    #切出後面1000筆作為test set
 
 金字塔空間池化，簡稱 SPP，當處設計就是為了處理不同大小之圖片。雖然 CNN 本身 convolution -> pooling -> ... -> convolution -> pooling 如此之架構，其實並不受限於圖片大小，所有圖片都能用此架構訓練，問題出在當最後一次 pooling 需要進到 fully-connected layer 時，fully-connected layer 需要確立輸入大小，而不同尺寸之圖片，在最後一次 pooling 完後，其資料矩陣大小並不一致，這就導致了處理到一半的資料無法供 fully-connected layer 訓練的問題。
 
-![](/README.assets/20190609 ScreenShot - 003.png)
+![](README.assets/003.png)
 
 傳統的處理方法，是在圖片進入 CNN 模型之前，先裁切或縮放變成一致之大小，以確保資料進入 fully-connected layer 之前大小一致。而金字塔空間池化的思維，是引入一個無論何種尺度的資料最後都會被 pooling 成一致大小之輸出，以解決進入fully-connected layer 時大小不一的問題。
 
-![](/README.assets/20190609 ScreenShot - 004.png)
+![](/README.assets/004.png)
 
 實際 SPP 處理概念是，pooling 原本是作為取得特徵值使用的，那就將原本的固定多少尺寸取一特徵值，變成固定取一定量的特徵值，而依輸入矩陣的大小修正 pooling 時的矩陣大小，將不同尺寸輸入分割成固定數量的區域，用來取特徵值。
 

@@ -157,6 +157,7 @@ print("Done.")
 程式碼如下
 
 ```python
+import numpy as np
 fr = open("memeurls.csv", 'r')
 for l in fr:
     break
@@ -212,13 +213,128 @@ for k in range(8000):
 ### 關於圖片規格處理
 
 由於進行 train 的時候若大小不同，SPP(Spatial Pyramid Pooling，空間金字塔池化) 雖支援不同大小的輸入，train 的時候還是只能丟同一種大小的資料。
+
 一種解法是先丟第一種大小 train，接著再用另一種大小 train 下去，但我們的資料來源中，非迷因的圖片規格統一 (32x32) 且很小，meme 的圖片規格雜亂，若依序用不同大小 train 的話會非常耗時，再者同一種大小只會都是迷因或都不是迷因，在 train 的時候疑似會有毀滅性的後果。最後決定將所有圖片都拉至128*128進行訓練，訓練好的模型則可以接受各種大小的輸入。
+
+本報告在進入模型前資料甚於資料整合程式碼如下：
+
+```python
+x2_train = np.concatenate([x for x in imgs])    # 把所有圖片數組concatenate在一起
+y2_train = np.zeros((8000+total,2))
+for i in range(8000):
+    y2_train[i] = [1, 0]    #前八千筆的label是[1,0]，代表不是meme
+for i in range(8000,8000+total):
+    y2_train[i] = [0, 1]    #八千筆後的label是[0,1]，代表是meme
+x1_train = x2_train
+y1_train = y2_train    # 初始化x1_train跟y1_train    
+count = 0
+indices = range(8000+total)    #8000+total為總資料數量
+indices = np.array(indices)
+np.random.shuffle(indices)    #將index打亂
+for i in indices:
+    x1_train[count] = x2_train[i]
+    y1_train[count] = y2_train[i]    #把打亂後的index依序填入新的陣列
+    count = count + 1
+x0_train = x1_train[:7000+total]
+y0_train = y1_train[:7000+total]
+x0_test = x1_train[7000+total:]
+y0_test = y1_train[7000+total:]    #切出後面1000筆作為test set
+```
 
 本章節相關程式碼詳見本專案 dataset 資料夾。
 
 ## 模型
 
+### 理論說明 - 空間金字塔池化(Spatial Pyramid Pooling)
 
+本報告由於可能會需要處理不同大小之圖片，利用改變大小或剪裁可能力有未逮，故在此考量下我們引用了金字塔空間池化，其詳細之論文可參考：[Spatial Pyramid Pooling in Deep Convolutional Networks for Visual Recognition](https://arxiv.org/abs/1406.4729)
+
+金字塔空間池化，簡稱 SPP，當處設計就是為了處理不同大小之圖片。雖然 CNN 本身 convolution -> pooling -> ... -> convolution -> pooling 如此之架構，其實並不受限於圖片大小，所有圖片都能用此架構訓練，問題出在當最後一次 pooling 需要進到 fully-connected layer 時，fully-connected layer 需要確立輸入大小，而不同尺寸之圖片，在最後一次 pooling 完後，其資料矩陣大小並不一致，這就導致了處理到一半的資料無法供 fully-connected layer 訓練的問題。
+
+![](README.assets/20190609 ScreenShot - 003.png)
+
+傳統的處理方法，是在圖片進入 CNN 模型之前，先裁切或縮放變成一致之大小，以確保資料進入 fully-connected layer 之前大小一致。而金字塔空間池化的思維，是引入一個無論何種尺度的資料最後都會被 pooling 成一致大小之輸出，以解決進入fully-connected layer 時大小不一的問題。
+
+![](README.assets/20190609 ScreenShot - 004.png)
+
+實際 SPP 處理概念是，pooling 原本是作為取得特徵值使用的，那就將原本的固定多少尺寸取一特徵值，變成固定取一定量的特徵值，而依輸入矩陣的大小修正 pooling 時的矩陣大小，將不同尺寸輸入分割成固定數量的區域，用來取特徵值。
+
+但對大小不同的圖片，其適合取特徵值尺度也不同，SPP 採取一個簡單暴力的做法，就是引入不同規模的框架，例如上圖，就是設定取 4x4、2x2、1x1 個特徵值，如此取得固定長度的輸出，再交由 fully-connected layer 進行後續處理。
+
+而在 Keras 中實現 SPP 的方法，可以藉由自 https://github.com/yhenon/keras-spp 下載專案壓縮檔，並在 python 環境下於解壓縮後之資料夾執行 `python setup.py install` 之指令，或於 shell 下執行：
+
+```shell
+git clone https://github.com/yhenon/keras-spp.git
+sudo python setup.py install
+```
+
+### 模型設定
+
+
+
+程式碼：
+
+```python
+#資料預處理完後，應用SPP實作CNN
+%matplotlib inline
+import numpy as np
+import matplotlib.pyplot as plt
+from keras.datasets import mnist
+from keras.models import Sequential
+from keras.layers import Dense, Dropout, Activation, Flatten
+from keras.layers import Conv2D, MaxPooling2D
+from keras.utils import np_utils
+from keras.optimizers import Adadelta
+from keras import backend as K
+from spp.SpatialPyramidPooling import SpatialPyramidPooling #SPP
+
+#資料已處理完，x_train與x_test皆為( 資料筆數 , 長 , 寬 , 3(RGB) )
+#y_train與y_test則為catergorical的0與1
+
+#CNN的模型設為五層，第五層最後的pooling改用SPPnet
+
+num_channels = 3  #RGB
+num_classes = 2   #是或不是meme
+
+model = Sequential()
+model.add(Conv2D(4, (8,8), padding='same', input_shape=(None, None, 3)))   #圖片大小不固定所以用NONE
+model.add(Activation('relu'))
+model.add(MaxPooling2D(pool_size=(2, 2)))   #第一層
+model.add(Conv2D(8, (7,7), padding='same'))
+model.add(Activation('relu'))
+model.add(MaxPooling2D(pool_size=(2, 2)))   #第二層
+model.add(Conv2D(16, (6,6), padding='same'))
+model.add(Activation('relu'))
+model.add(MaxPooling2D(pool_size=(2, 2)))   #第三層
+model.add(Conv2D(32, (5,5), padding='same'))
+model.add(Activation('relu'))
+model.add(MaxPooling2D(pool_size=(2, 2)))   #第四層
+model.add(Conv2D(64, (4,4), padding='same'))
+model.add(Activation('relu'))
+#這裡運用SPP讓結果的大小是固定的
+model.add(SpatialPyramidPooling([1, 2, 4])) #會輸出(1+4+16)=21的大小
+model.add(Dense(num_classes))   #搭配上行是一個21*2的FC layer
+model.add(Activation('softmax'))
+
+model.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
+
+#training
+model.fit(x_train, y_train, batch_size=128, epochs=10)
+result = model.predict_classes(x_test)
+
+#抽9張圖片出來看看結果
+pick = np.random.randint(1,9999, 9)
+plt.subplots_adjust(wspace=0.5, hspace=0.5)
+for i in range(9):
+    plt.subplot(3,3,i+1)
+    plt.imshow(x0_test[pick[i]], cmap='Greys')
+    plt.title(result[pick[i]])
+    plt.axis("off")
+    
+score = model.evaluate(x_test, y_test)    
+loss, acc = score    
+print(acc)    
+```
 
 ### 分析結果
 

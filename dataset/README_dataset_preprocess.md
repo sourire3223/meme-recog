@@ -2,6 +2,7 @@
 
 Python Code：
 
+- dataset.py：整體的資料輸入程式碼
 - cifar_preprocess.py：載入並預處理 cifar-100
 
 - memegenerator_image_url.py：處理 Meme Generator Data Set 之 URL 問題

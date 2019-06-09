@@ -270,7 +270,9 @@ sudo python setup.py install
 
 ### 模型設定
 
+模型設定圖如下：此圖為模型設計，共有五層 convolution layer，其中第三層為避免縮得太小，沒有進行 pooling，而第五層由於利用 SPP 會自動壓平，就不需另行設計 flatten layer。
 
+![model_plot](README.assets/model_plot.png)
 
 程式碼：
 
@@ -338,11 +340,49 @@ print(acc)
 
 ### 分析結果
 
+```
+> x_train = x0_train
+> y_train = y0_train
+> model.fit(x_train, y_train, batch_size=500, epochs=15)    #batch_size跟epochs可以再調整
 
+Epoch 1/10
+200/200 [==============================] - 10s 51ms/step - loss: 0.5375 - acc: 0.7500
+Epoch 2/10
+200/200 [==============================] - 7s 35ms/step - loss: 0.5186 - acc: 0.7500
+Epoch 3/10
+200/200 [==============================] - 7s 35ms/step - loss: 0.5125 - acc: 0.7500
+Epoch 4/10
+200/200 [==============================] - 7s 35ms/step - loss: 0.5253 - acc: 0.7500
+Epoch 5/10
+200/200 [==============================] - 7s 35ms/step - loss: 0.4982 - acc: 0.7500
+Epoch 6/10
+200/200 [==============================] - 7s 35ms/step - loss: 0.4816 - acc: 0.7500
+Epoch 7/10
+200/200 [==============================] - 7s 35ms/step - loss: 0.4806 - acc: 0.7500
+Epoch 8/10
+200/200 [==============================] - 7s 35ms/step - loss: 0.4579 - acc: 0.7500
+Epoch 9/10
+200/200 [==============================] - 7s 37ms/step - loss: 0.4774 - acc: 0.7500
+Epoch 10/10
+200/200 [==============================] - 8s 39ms/step - loss: 0.4333 - acc: 0.7500
 
-## 結論
+> x_test = x0_test
+> y_test = y0_test
+> score = model.evaluate(x_test, y_test)
+> print(f'測試資料的 loss: {score[0]:.5f}')
+> print(f'測試資料的正確率: {score[1]}')
 
+測試資料的 loss: 0.36642
+測試資料的正確率: 0.8205128205128205
+```
 
+正確率僅八成多(執行之程式碼放置於 [Training.ipynb](Training.ipynb))
+
+## 討論
+
+依 [Spatial Pyramid Pooling in Deep Convolutional Networks for Visual Recognition](https://arxiv.org/abs/1406.4729) 的敘述，理論上 SPP 取得特徵值的效果會比傳統裁切縮放好很多，但由於我們尚未找到撰寫 free size 之資料形式，無法以圖案原始尺吋進行分析，可能是這個原因沒有發揮 SPP 的功能，最後僅得到約八成之結果。
+
+感謝老師助教這半年來的課程，讓我們這些機器學習跟寫程式的初學者學到很多，謝謝。
 
 
 
